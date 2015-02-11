@@ -2,11 +2,11 @@
  * Created by jamie on 2/11/15.
  */
 
-angular.module('clymbAhead').directive('clymbAhead', function () {
+angular.module('clymbAhead').directive('clymbAhead', function ($http) {
     'use strict';
     return {
         restrict: 'E',
-        template: '<input type="text"  class="form-control" placeholder="{{hint}}"/>',
+        template: '<input type="text" ng-model="text"  class="form-control" placeholder="{{hint}}"/>',
         scope: {
             hint: '@'
         },
@@ -14,7 +14,14 @@ angular.module('clymbAhead').directive('clymbAhead', function () {
             if (!attrs.hint) //helper hint
                 scope.hint = 'Change me with the "hint" attribute';
 
+            //this is where we start!
+            scope.$watch('text', function (value) {
+                //console.log(value);
+                //calculate all possible next letters based on letters before the last typed character
 
+                //find last typed char?
+                //maybe can have 2 trees? one going up and one going down if user is in the middle of text
+            });
 
             //Constructor of a Node object
             function ClimbNode(character, parentStr, words2Fin, endings) {
