@@ -2,11 +2,11 @@
  * Created by jamie on 2/11/15.
  */
 
-angular.module('clymbAhead').directive('clymbAhead', function ($http) {
+clymbAhead.directive('clymbAhead', function ($http, alphabetSrvc) {
     'use strict';
     return {
         restrict: 'E',
-        template: '<input type="text" ng-model="text"  class="form-control" placeholder="{{hint}}"/>',
+        template: '<input type="text" ng-model="input"  class="form-control" placeholder="{{hint}}"/>',
         scope: {
             hint: '@'
         },
@@ -14,14 +14,88 @@ angular.module('clymbAhead').directive('clymbAhead', function ($http) {
             if (!attrs.hint) //helper hint
                 scope.hint = 'Change me with the "hint" attribute';
 
-            //this is where we start!
-            scope.$watch('text', function (value) {
-                //console.log(value);
-                //calculate all possible next letters based on letters before the last typed character
+            var alphabet = alphabetSrvc.alphabet;//hashtable for alphabet
 
-                //find last typed char?
-                //maybe can have 2 trees? one going up and one going down if user is in the middle of text
+            //this is where we start!
+            scope.$watch('input', function (value) {
+                if (value) {
+                    //calculate all possible next letters based on letters before the last typed character
+                    //or based on scope.input
+                    var length = scope.input.length;
+                    $http.get('data/dictionary.JSON').
+                        success(function (data, status, headers, config) {
+                            // this callback will be called asynchronously
+                            // when the response is available
+                            var results = findPossibilities(scope.input, data.dictionary);
+                            var scores = scoreNextLetters(scope.input.length, results);
+                            var nextChars = getNextChars(scope.amount, scores);
+
+
+                            console.log(results);
+
+                        }).
+                        error(function (data, status, headers, config) {
+                            // called asynchronously if an error occurs
+                            // or server returns response with an error status.
+                            console.log(status);
+                        });
+                    console.log(length);
+
+                    //find last typed char?
+                    //maybe can have 2 trees? one going up and one going down if user is in the middle of text
+                }
             });
+
+            var findPossibilities = function (input, dictionary) {
+                var results = [];
+                var len = input.length;
+                for (var i = 0; i < dictionary.length; i++) {
+                    var word = dictionary[i].toLowerCase();
+                    if (word.substr(0, len) == input.toLowerCase()) results.push(word)
+                }
+                return results;
+            };
+            /**
+             * gets the top {{amount}} of characters based on scoring alg
+             * @param amount
+             * @param scores
+             */
+            var getNextChars = function(amount, scores) {
+                var nextChars = [];
+                var topChars = scores.slice(0, scope.amount);
+                for (var i = 0; i < topChars.length; i++) nextChars.push(topChars[i].letter);
+            };
+            /**
+             * Look at results and collect all of the letters after 'len' distance from 0
+             * This needs a scoring procedure...
+             * @returns {Array} sorted array (DESCENDING)
+             */
+            var scoreNextLetters = function (len, results) {
+                //instead of whole alphabet, just make a hashtable out of all of the next letters possible
+                //on the fly
+                var nextLetters = {};
+                var scores = {};
+                for (var i = 0; i < results.length; i++) {
+                    var c = results[i].charAt(len);
+                    if (nextLetters.hasOwnProperty(c))
+                        nextLetters[c]++;
+                    else
+                        nextLetters[c] = 1;
+                }
+
+                //now sort and take the top {{amount}}
+                var sorted = [];
+                for (var key in nextLetters)
+                    sorted.push({letter: key, score: nextLetters[key]});
+
+                sorted.sort(scoreComparator).reverse();//TODO make a comparator
+                return sorted;
+
+            };
+            /** comparator for 2 letterObjs */
+            var scoreComparator = function (a, b) {
+                return a.score - b.score;
+            };
 
             //Constructor of a Node object
             function ClimbNode(character, parentStr, words2Fin, endings) {
@@ -69,6 +143,10 @@ angular.module('clymbAhead').directive('clymbAhead', function ($http) {
             };
         }
     };
+
+    /*
+     dude says I'm going to go get groceries and comes back with 3 days worth of Panda Express
+     */
 });
 //& execute a function in the parent scope as opposed to the isolate scope
 //= receive an object

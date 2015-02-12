@@ -5,8 +5,8 @@
  * @description
  * # MainCtrl
  * Controller of the climbTreeApp
- */
-angular.module('clymbAhead').controller('MainCtrl', function ($scope, $http) {
+*/
+clymbAhead.controller('MainCtrl', function ($scope, $http) {
     'use strict';
     $scope.test = "Start here";
 

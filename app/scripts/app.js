@@ -1,4 +1,3 @@
-'use strict';
 
 /**
  * @ngdoc overview
@@ -8,7 +7,7 @@
  *
  * Main module of the application.
  */
-angular.module('clymbAhead', [
+var clymbAhead = angular.module('clymbAhead', [
     'ngAnimate',
     'ngCookies',
     'ngResource',
