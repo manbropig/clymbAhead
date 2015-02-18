@@ -8,11 +8,13 @@ clymbAhead.directive('clymbAhead', function ($http, alphabetSrvc) {
         restrict: 'E',
         template: '<input type="text" ng-model="input"  class="form-control" placeholder="{{hint}}"/>',
         scope: {
-            hint: '@'
+            hint: '@',
+            amount: '@'
         },
         link: function (scope, element, attrs) {
             if (!attrs.hint) //helper hint
                 scope.hint = 'Change me with the "hint" attribute';
+            if(!attrs.amount) scope.amount = 5;
 
             var alphabet = alphabetSrvc.alphabet;//hashtable for alphabet
 
@@ -22,16 +24,18 @@ clymbAhead.directive('clymbAhead', function ($http, alphabetSrvc) {
                     //calculate all possible next letters based on letters before the last typed character
                     //or based on scope.input
                     var length = scope.input.length;
-                    $http.get('data/dictionary.JSON').
-                        success(function (data, status, headers, config) {
+                    $http.get('data/dictionary.JSON')
+                        .success(function (data, status, headers, config) {
                             // this callback will be called asynchronously
                             // when the response is available
                             var results = findPossibilities(scope.input, data.dictionary);
-                            var scores = scoreNextLetters(scope.input.length, results);
-                            var nextChars = getNextChars(scope.amount, scores);
+                            var letters = scoreNextLetters(scope.input.length, results);
+
+                            var nextChars = getNextChars(scope.amount, letters);
 
 
                             console.log(results);
+                            console.log(letters);
 
                         }).
                         error(function (data, status, headers, config) {
@@ -74,19 +78,21 @@ clymbAhead.directive('clymbAhead', function ($http, alphabetSrvc) {
                 //instead of whole alphabet, just make a hashtable out of all of the next letters possible
                 //on the fly
                 var nextLetters = {};
-                var scores = {};
-                for (var i = 0; i < results.length; i++) {
+                //var scores = {};
+                for (var i = 0; i < results.length; i++) { //init hashtable
                     var c = results[i].charAt(len);
-                    if (nextLetters.hasOwnProperty(c))
-                        nextLetters[c]++;
+                    if (nextLetters.hasOwnProperty(c)){
+                        nextLetters[c]["count"]++;
+                        nextLetters[c]["words"].push(results[i]);
+                    }
                     else
-                        nextLetters[c] = 1;
+                        nextLetters[c] = {"count": 1, "words": [results[i]]};
                 }
 
                 //now sort and take the top {{amount}}
                 var sorted = [];
                 for (var key in nextLetters)
-                    sorted.push({letter: key, score: nextLetters[key]});
+                    sorted.push({"letter": key, "words": nextLetters[key]["words"],"score": nextLetters[key]["count"]});
 
                 sorted.sort(scoreComparator).reverse();//TODO make a comparator
                 return sorted;
