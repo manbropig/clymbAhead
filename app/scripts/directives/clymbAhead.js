@@ -2,7 +2,14 @@
  * Created by jamie on 2/11/15.
  */
 
-clymbAhead.directive('clymbAhead', function ($http, alphabetSrvc) {
+/**
+ * Take user input
+ *      find all matching words from length 0 -> input.length ( findPossibilities() )
+ *      for each potential word2finish, get the next letter
+ *          for each next letter, calculate each potential word2finish from
+ *          length 0 -> input.length + # of chars added.
+ */
+clymbAhead.directive('clymbAhead', function ($http) {
     'use strict';
     return {
         restrict: 'E',
@@ -14,90 +21,105 @@ clymbAhead.directive('clymbAhead', function ($http, alphabetSrvc) {
         link: function (scope, element, attrs) {
             if (!attrs.hint) //helper hint
                 scope.hint = 'Change me with the "hint" attribute';
-            if(!attrs.amount) scope.amount = 5;
+            if (!attrs.amount) scope.amount = 5;
 
-            var alphabet = alphabetSrvc.alphabet;//hashtable for alphabet
+            $http.get('data/dictionary.JSON')
+                .success(function (data, status, headers, config) {
+                    scope.dictionary = data.dictionary;
+                }).
+                error(function (data, status, headers, config) {
+                    console.log(status);
+                });
 
             //this is where we start!
             scope.$watch('input', function (value) {
                 if (value) {
                     //calculate all possible next letters based on letters before the last typed character
                     //or based on scope.input
-                    var length = scope.input.length;
-                    $http.get('data/dictionary.JSON')
-                        .success(function (data, status, headers, config) {
-                            // this callback will be called asynchronously
-                            // when the response is available
-                            var results = findPossibilities(scope.input, data.dictionary);
-                            var letters = scoreNextLetters(scope.input.length, results);
-
-                            var nextChars = getNextChars(scope.amount, letters);
-
-
-                            console.log(results);
-                            console.log(letters);
-
-                        }).
-                        error(function (data, status, headers, config) {
-                            // called asynchronously if an error occurs
-                            // or server returns response with an error status.
-                            console.log(status);
-                        });
-                    console.log(length);
-
+                    var results = findPossibilities(scope.input, scope.dictionary);
+                    //var letters = scoreNextLetters(scope.input.length, results);
+                    //var nextChars = getNextChars(scope.amount, letters);
+                    console.log(results);
+                    //console.log(letters);
                     //find last typed char?
                     //maybe can have 2 trees? one going up and one going down if user is in the middle of text
                 }
             });
 
-            var findPossibilities = function (input, dictionary) {
-                var results = [];
+
+            /**
+             * gets all possible words2finish
+             * @param input - user input
+             * @returns {Array} all possible words2finish
+             */
+            var findPossibilities = function (input) {
+                var words2Finish = [];
+                var inputChar = {};
                 var len = input.length;
-                for (var i = 0; i < dictionary.length; i++) {
-                    var word = dictionary[i].toLowerCase();
-                    if (word.substr(0, len) == input.toLowerCase()) results.push(word)
+                for (var i = 0; i < scope.dictionary.length; i++) {
+                    var word = scope.dictionary[i].toLowerCase();
+                    if (word.substr(0, len) === input.toLowerCase()) words2Finish.push(word)
                 }
-                return results;
+                inputChar.words2Finish = words2Finish;// input char has an array of possible endings
+                //return results;
+                //return scoreNextLetters(scope.input.length, results);
+                if (words2Finish.length < 2) inputChar.nextLevel = [words2Finish[0]];
+                else {
+                    inputChar.nextLevel = scoreNextLetters(input.length, words2Finish);
+                    for (var i = 0; i < inputChar.nextLevel.length; i++) { //for each next possible char, get IT'S next possible char
+                        var next = inputChar.nextLevel[i];
+                        var possibleInput = input + next.letter;
+                        if(!next.nextLevel)
+                            next.nextLevel = [];
+                        var possibilities = findPossibilities(possibleInput);
+
+                        next.nextLevel = next.nextLevel.concat(possibilities.nextLevel);
+
+                    }
+                }
+                return inputChar;
             };
             /**
              * gets the top {{amount}} of characters based on scoring alg
              * @param amount
              * @param scores
              */
-            var getNextChars = function(amount, scores) {
+            var getNextChars = function (amount, scores) {
                 var nextChars = [];
                 var topChars = scores.slice(0, scope.amount);
                 for (var i = 0; i < topChars.length; i++) nextChars.push(topChars[i].letter);
             };
             /**
-             * Look at results and collect all of the letters after 'len' distance from 0
+             * Look at all possible words2finish and collect all of the letters after 'len' distance from 0
              * This needs a scoring procedure...
              * @returns {Array} sorted array (DESCENDING)
              */
             var scoreNextLetters = function (len, results) {
-                //instead of whole alphabet, just make a hashtable out of all of the next letters possible
-                //on the fly
-                var nextLetters = {};
-                //var scores = {};
+                var nextLetters = {};//make a hashtable out of all of the next letters possible
                 for (var i = 0; i < results.length; i++) { //init hashtable
                     var c = results[i].charAt(len);
-                    if (nextLetters.hasOwnProperty(c)){
+                    if (nextLetters.hasOwnProperty(c)) {
                         nextLetters[c]["count"]++;
                         nextLetters[c]["words"].push(results[i]);
+                        nextLetters[c]["position"] = len + 1;
                     }
                     else
-                        nextLetters[c] = {"count": 1, "words": [results[i]]};
+                        nextLetters[c] = {"count": 1, "words": [results[i]], "position": len + 1};
                 }
-
-                //now sort and take the top {{amount}}
-                var sorted = [];
-                for (var key in nextLetters)
-                    sorted.push({"letter": key, "words": nextLetters[key]["words"],"score": nextLetters[key]["count"]});
-
-                sorted.sort(scoreComparator).reverse();//TODO make a comparator
+                //TODO put recursive call into each letter object-creation for what letters, IT'S next letters will be?
+                var sorted = [];//now sort and take the top {{amount}}
+                for (var letter in nextLetters)
+                    sorted.push({
+                        "letter": letter,
+                        "words": nextLetters[letter]["words"],
+                        "score": nextLetters[letter]["count"],
+                        "position": nextLetters[letter]["position"]
+                    });
+                sorted.sort(scoreComparator).reverse();
                 return sorted;
-
             };
+
+
             /** comparator for 2 letterObjs */
             var scoreComparator = function (a, b) {
                 return a.score - b.score;
@@ -157,3 +179,18 @@ clymbAhead.directive('clymbAhead', function ($http, alphabetSrvc) {
 //& execute a function in the parent scope as opposed to the isolate scope
 //= receive an object
 
+/**
+ * take the user inputs last letter
+ * get all possible next letters and words associated with them
+ * if the # of possible words to complete == 1, show the entire string
+ * if the # of possible words to complete == 0, you're at the end of a possible word with this char
+ *      These situations may occur even if there is a longer word to complete
+ *          In this case, color the node differently?
+ *          i.e. "call" and "calling" => "call" is a complete word even though there is a longer possible word to fin
+ *
+ *  Take user input
+ *      find all matching words from length 0 -> input.length
+ *      for each potential word2finish, get the next letter
+ *          for each next letter, calculate each potential word2finish from
+ *          length 0 -> input.length + # of chars added.
+ */
