@@ -25,7 +25,7 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
                 scope.hint = 'Change me with the "hint" attribute';
             if (!attrs.amount) scope.amount = 5;
             if(!attrs.size) scope.size = '25px';
-
+            scope.htmlStack = [];//stack to hold the second half of the HTML for the tree
             $http.get('data/dictionary.JSON')
                 .success(function (data, status, headers, config) {
                     scope.dictionary = data.dictionary;
@@ -36,13 +36,13 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
 
             //this is where we start!
             scope.$watch('input', function (value) {
-                var kids = element.children();
+                //TODO:trying to remove the whole thing after each input change - not yet working
                 if (value) {
                     //calculate all possible next letters based on letters before the last typed character
                     //or based on scope.input
                     var results = findPossibilities(scope.input);
                     console.log(results);
-                    scope.output = getOutput(results);
+                    scope.output = getOutputHTML(results);
                     var elem = angular.element(scope.output);
                     var compiled = $compile(elem);
                     scope.compiled = compiled;
@@ -52,21 +52,40 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
             });
 
             /**
+             * PROBABLY NEEDS TO BE RECURSIVE AS WELL
              * generate the output HTML to display onscreen
              * @param results
              */
-            var getOutput = function(results) {
+            var getOutputHTML = function(results) {
                 scope.output = scope.input;
-                var html = '<div style="width:100%; font-size:{{size}};text-align: center">' +
-                        '<div class="node">' +scope.output +'</div>' +
-                        '</div>';
-                for(var i = 0; i < results.length; i++) {
+                //var width = 100/results.length + "%";
+                //var html = '<div style="width:100%; font-size:{{size}};text-align: center">' +
+                //        '<div class="node">'+scope.output +'</div>';
 
-                }
+                //TODO: call a recursive function here to get HTML inside above and below html vars
+                //TODO: maybe better yet, give each node an "html" attribute as you create it
 
-                return html;
+
+
+                return getTreeHTML(scope.output);
+
+                //return html;
             };
 
+            var getTreeHTML = function(output) {
+                //I think it should be a tree, but pretty tired so maybe not. I'm gonna try.
+                //OR maybe tables within tables!
+                /*
+                Might need 2 conjoined recursive functions,
+                one to make the tables and one to make the nodes
+                */
+
+                var nodeHTML = '<table class="treeTable"><tr><td><div class="node">'+scope.input+'</div>';
+                var nodeEND = '</td></tr></table>';
+
+
+                return nodeHTML + nodeEND;
+            };
 
             /**
              * Recursive function
@@ -83,13 +102,33 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
                     if (word.substr(0, len) === input.toLowerCase()) words2Finish.push(word)
                 }
                 inputChar.words2Finish = words2Finish;// input char has an array of possible endings
-                //return results;
-                //return scoreNextLetters(scope.input.length, results);
-                if (words2Finish.length < 2) inputChar.nextLevel = [words2Finish[0]];
+                if (words2Finish.length < 2) {
+                    inputChar.nextLevel = [words2Finish[0]];
+                    inputChar.begHTML = ''+
+                    '<table class="treeTable"> ' +
+                        '<tr> ' +
+                            '<td>' +
+                                '<div class="node">'+inputChar.nextLevel+'</div>' +
+                            '</td> ' +
+                        '</tr> ' +
+                    '</table>';
+                }
                 else {
+                    inputChar.value = input.substr(len - 1, len);
                     inputChar.nextLevel = scoreNextLetters(input.length, words2Finish);
+                    inputChar.begHTML = ''+
+                    '<div class="node">'+inputChar.letter+'</div>'+
+                    '<table class="treeTable">'+
+                        '<tr>'+
+                            '<td>';
+                    scope.htmlStack.push('</td></tr></table>');
                     for (var i = 0; i < inputChar.nextLevel.length; i++) { //for each next possible char, get IT'S next possible char
                         var next = inputChar.nextLevel[i];
+                        next.html = ''+
+                        '<div class="node">'+inputChar.letter+'</div>'+
+                        '<table class="treeTable">'+
+                            '<tr>'+
+                                '<td>';
                         var possibleInput = input + next.letter;
                         if(!next.nextLevel)
                             next.nextLevel = [];

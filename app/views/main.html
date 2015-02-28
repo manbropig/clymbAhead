@@ -1,17 +1,73 @@
 <!--<div class="jumbotron">-->
-    <!--<h1>'Allo, 'Allo!</h1>-->
+<!--<h1>'Allo, 'Allo!</h1>-->
 
-    <!--<p class="lead">-->
-        <!--<img src="images/yeoman.png" alt="I'm Yeoman"><br>-->
-        <!--Always a pleasure scaffolding your apps.-->
-    <!--</p>-->
+<!--<p class="lead">-->
+<!--<img src="images/yeoman.png" alt="I'm Yeoman"><br>-->
+<!--Always a pleasure scaffolding your apps.-->
+<!--</p>-->
 
-    <!--<p><a class="btn btn-lg btn-success" ng-href="#/">Splendid!<span class="glyphicon glyphicon-ok"></span></a></p>-->
+<!--<p><a class="btn btn-lg btn-success" ng-href="#/">Splendid!<span class="glyphicon glyphicon-ok"></span></a></p>-->
 <!--</div>-->
 
 <!--<div class="row marketing">-->
-    <!--<input class="form-control" type="text" ng-model="test">-->
+<!--<input class="form-control" type="text" ng-model="test">-->
 <!--</div>-->
 <div class="row marketing">
     <clymb-ahead hint="{{test}}"></clymb-ahead>
+</div>
+<div class="row">
+    <table class="treeTable">
+        <tr>
+            <td>
+                <div class="node">c</div>
+                <table class="treeTable">
+                    <tr>
+                        <td>
+                            <div class="node">o</div>
+                            <table class="treeTable">
+                                <tr>
+                                    <td>
+                                        <div class="node">l</div>
+                                        <table class="treeTable">
+                                            <tr>
+                                                <td>
+                                                    <div class="node">orado</div>
+                                                    <!-- No tree because leafNode -->
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <div class="node">n</div>
+                                        <table class="treeTable">
+                                            <tr>
+                                                <td>
+                                                    <div class="node">necticut</div>
+                                                    <!-- No tree because leafNode -->
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td>
+                            <!--
+                        a <td> should always have a <div class="node">{{char}}</div
+                        it should have a table if it has children
+                        -->
+                            <div class="node">a</div>
+                            <table class="treeTable">
+                                <tr>
+                                    <td>
+                                        <div class="node">lifornia</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </div>
