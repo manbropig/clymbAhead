@@ -95,16 +95,16 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
              */
             var findPossibilities = function (input) {
                 var words2Finish = [];
-                var inputChar = {};
+                var inputChar = {words2Finish:[]};// input char has an array of possible endings
                 var len = input.length;
+                //loop through entire dictionary and find matches from beginning to end of input
                 for (var i = 0; i < scope.dictionary.length; i++) { //TODO find a way to make more efficient
                     var word = scope.dictionary[i].toLowerCase();
-                    if (word.substr(0, len) === input.toLowerCase()) words2Finish.push(word)
+                    if (word.substr(0, len) === input.toLowerCase()) inputChar.words2Finish.push(word)
                 }
-                inputChar.words2Finish = words2Finish;// input char has an array of possible endings
-                if (words2Finish.length < 2) {
-                    inputChar.nextLevel = [words2Finish[0]];
-                    inputChar.begHTML = ''+
+                if (inputChar.words2Finish.length < 2) {//if 1 or less words2finish
+                    inputChar.nextLevel = [words2Finish[0]];//the next level has the rest of the string instead of a char
+                    inputChar.begHTML = ''+ //and the HTML will just be a table with 1 row containing that string
                     '<table class="treeTable"> ' +
                         '<tr> ' +
                             '<td>' +
@@ -115,17 +115,25 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
                 }
                 else {
                     inputChar.value = input.substr(len - 1, len);
-                    inputChar.nextLevel = scoreNextLetters(input.length, words2Finish);
+                    inputChar.nextLevel = scoreNextLetters(input.length, inputChar.words2Finish);
+
+                    /*
+                    If a node has 2 or more kids
+                        gen a table with 1 row for it's header node and another for its kids
+                        a second row for its kids
+                            # <td>'s == number of kids
+                     */
+
                     inputChar.begHTML = ''+
                     '<div class="node">'+inputChar.letter+'</div>'+
                     '<table class="treeTable">'+
                         '<tr>'+
                             '<td>';
-                    scope.htmlStack.push('</td></tr></table>');
+
                     for (var i = 0; i < inputChar.nextLevel.length; i++) { //for each next possible char, get IT'S next possible char
                         var next = inputChar.nextLevel[i];
                         next.html = ''+
-                        '<div class="node">'+inputChar.letter+'</div>'+
+                        '<div class="node">'+inputChar.value+'</div>'+
                         '<table class="treeTable">'+
                             '<tr>'+
                                 '<td>';
@@ -134,9 +142,14 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
                             next.nextLevel = [];
                         var possibilities = findPossibilities(possibleInput);
                         next.nextLevel = next.nextLevel.concat(possibilities.nextLevel);
+
                     }
                 }
                 return inputChar;
+            };
+
+            var getNodeHTML = function(node) {
+
             };
 
             /**
@@ -184,10 +197,6 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
             };
         }
     };
-
-    /*
-     dude says I'm going to go get groceries and comes back with 3 days worth of Panda Express
-     */
 });
 //& execute a function in the parent scope as opposed to the isolate scope
 //= receive an object
