@@ -17,4 +17,5 @@
 
 .treeTable td{
     border-width: thin;
+    padding: 0;
 }

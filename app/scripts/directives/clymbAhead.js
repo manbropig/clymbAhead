@@ -9,12 +9,19 @@
  *          for each next letter, calculate each potential word2finish from
  *          length 0 -> input.length + # of chars added.
  */
-clymbAhead.directive('clymbAhead', function ($http, $compile) {
+
+ /*
+    added by Kyle: dictionary service for creating a dictionary trie datastructure
+ */
+clymbAhead.directive('clymbAhead', function ($http, $compile, DictionarySrvc) {
     'use strict';
     return {
         restrict: 'E',
         //replace: true,
-        template: '<input type="text" ng-model="input"  class="form-control" placeholder="{{hint}}"/>',
+        /*ADDED BY KYLE:
+            made template file for the searching
+        */
+        templateUrl: "views/searchTemplate.html",
         scope: {
             hint: '@',
             amount: '@',
@@ -29,6 +36,14 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
             $http.get('data/dictionary.JSON')
                 .success(function (data, status, headers, config) {
                     scope.dictionary = data.dictionary;
+
+                    /*
+                        ADDED BY Kyle dictionarytrie datastructure
+                    */
+                    scope.dictionary2 = DictionarySrvc.createDictionary(data.dictionary);
+                    /*
+                        END ADDED BY Kyle
+                    */
                 }).
                 error(function (data, status, headers, config) {
                     console.log(status);
@@ -41,12 +56,20 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
                     //calculate all possible next letters based on letters before the last typed character
                     //or based on scope.input
                     var results = findPossibilities(scope.input);
-                    console.log(results);
-                    scope.output = getOutputHTML(results);
+                    console.log(results); 
+                    /*
+                        EDITED BY Kyle
+                            changed scope.output to a new function that generates table html
+                    */
+                    scope.output = generateOutputHtml(scope.input, scope.dictionary2);
                     var elem = angular.element(scope.output);
                     var compiled = $compile(elem);
                     scope.compiled = compiled;
-                    element.append(compiled(scope));
+                    /*ADDED By Kyle
+                        Instead of appending to the element, it now rewrites a div with class
+                        .clymb-ahead-table so that there is only 1 single line for input text
+                    */
+                    angular.element(".clymb-ahead-table").html(compiled(scope));
                 }
                 else scope.output = "";
             });
@@ -139,6 +162,7 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
                 return inputChar;
             };
 
+
             /**
              * Look at all possible words2finish and collect all of the letters after 'len' distance from 0
              * This needs a scoring procedure...
@@ -182,6 +206,76 @@ clymbAhead.directive('clymbAhead', function ($http, $compile) {
                 var topChars = scores.slice(0, scope.amount);
                 for (var i = 0; i < topChars.length; i++) nextChars.push(topChars[i].letter);
             };
+
+/*
+    ADDED BY Kyle
+*/
+            /*
+                Generate HTML and based on the input. Creates table with the first row
+                as the input and looks through the dictionary tire to see if the word is 
+                there.
+            */
+            var generateOutputHtml = function(input, dictionary){
+                if(input.length>0){
+                    var currentTrie = dictionary[input.charAt(0).toLowerCase()];
+                    for(var i=1; i<input.length && currentTrie!=null; i++){
+                        currentTrie = currentTrie[input.charAt(i)];
+                    }
+                    var html = 
+                            htmlTableOpen +
+                                htmlTdOpen +
+                                    htmlNodeGenerator(input) +
+                                    generateTableHtml(currentTrie)+
+                                htmlTdClose+
+                            htmlTableClose;
+                    return html;
+                }
+            }
+            /*
+                Recursively goes through the trie to find possible words based
+                on the input. Uses a depth first search
+            */
+            var generateTableHtml = function(node){
+                if(node==null || node.remainder.length==0){
+                    return "";
+                }
+                if(node.remainder.length==1){
+                    var t = htmlTableOpen + 
+                                htmlTdOpen + 
+                                    htmlNodeGenerator(node.remainder[0]) + 
+                                htmlTdClose + 
+                            htmlTableClose;
+                    return t;
+                }
+                var generatedTable = htmlTableOpen;
+                for(var key in node){
+                    if(key !=="remainder"){
+                       var generatedTd = 
+                            htmlTdOpen + 
+                                htmlNodeGenerator(key) +
+                                generateTableHtml(node[key]) +
+                            htmlTdClose;
+                       generatedTable+=generatedTd;
+                    }
+                }
+
+                generatedTable +=htmlTableClose;
+                return generatedTable;
+            };
+
+            /*
+                Constants/helpers used to generate table html in generator functions;
+            */
+            var htmlTableOpen = '<table class="treeTable"> <tr> ';
+            var htmlTableClose = '</tr> </table>'; 
+            var htmlTdOpen = '<td>';
+            var htmlTdClose = '</td>';
+            var htmlNodeGenerator = function(val){
+               return '<div class="node">'+ val +'</div>'
+            }
+/*
+    END ADDED BY Kyle
+*/
         }
     };
 
